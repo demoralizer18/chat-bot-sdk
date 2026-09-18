@@ -1,0 +1,30 @@
+{
+  "name": "brook-hollow-chat-sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend chat widget SDK for Brook Hollow Family Dentistry — drop-in chatbot powered by the BROOK-RAG backend.",
+  "main": "dist/brook-chat.js",
+  "module": "dist/brook-chat.esm.js",
+  "scripts": {
+    "build":  "node scripts/build.js",
+    "dev":    "node scripts/dev-server.js",
+    "serve":  "node scripts/dev-server.js",
+    "deploy": "node scripts/build.js && echo \"\nDone. Push to main — GitHub Actions will publish to GitHub Pages automatically.\""
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md"
+  ],
+  "keywords": [
+    "chatbot",
+    "dentistry",
+    "brook-hollow",
+    "widget",
+    "sdk"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

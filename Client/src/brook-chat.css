@@ -1,0 +1,637 @@
+/**
+ * Brook Hollow Chat Widget — Stylesheet
+ * ======================================
+ * All CSS custom properties are declared on #bhc-root so they can be
+ * overridden by the host page for theming:
+ *
+ *   #bhc-root {
+ *     --bhc-green:    #00b347;   /* swap brand colour *\/
+ *     --bhc-position: left;      /* not a real prop, just illustrative *\/
+ *   }
+ *
+ * Load order (choose ONE):
+ *   <link rel="stylesheet" href="brook-chat.css">   ← then JS auto-skips injection
+ *   or let the JS bundle inject it automatically (default, zero config).
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS — CSS custom properties
+   Override any of these on #bhc-root to theme the widget.
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-root {
+  --bhc-green:        #2bc560;
+  --bhc-green-dk:     #24a34a;
+  --bhc-green-lt:     #f0fdf4;
+  --bhc-red:          #EE2B31;
+  --bhc-bg:           #f4f6f9;
+  --bhc-white:        #ffffff;
+  --bhc-txt:          #111827;
+  --bhc-muted:        #6b7280;
+  --bhc-border:       #e5e7eb;
+  --bhc-border-lt:    #f0f2f4;
+  --bhc-shadow-color: rgba(0,0,0,0.10);
+  --bhc-radius-panel: 20px;
+  --bhc-radius-bub:   18px;
+  --bhc-font:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bhc-z-fab:        2147483646;
+  --bhc-z-panel:      2147483645;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESET — scoped entirely inside #bhc-root so we never touch the host page
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-root,
+#bhc-root * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--bhc-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FLOATING ACTION BUTTON (FAB)
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: var(--bhc-z-fab);
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(145deg, var(--bhc-green), var(--bhc-green-dk));
+  box-shadow:
+    0 4px 16px rgba(43, 197, 96, 0.45),
+    0 1px 4px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  overflow: hidden;
+}
+#bhc-fab:hover {
+  transform: scale(1.07);
+  box-shadow:
+    0 6px 22px rgba(43, 197, 96, 0.55),
+    0 2px 8px rgba(0,0,0,0.14);
+}
+#bhc-fab:focus-visible {
+  outline: 3px solid var(--bhc-white);
+  outline-offset: 3px;
+}
+#bhc-fab[data-open="true"] {
+  background: linear-gradient(145deg, var(--bhc-green-dk), #1d8c3f);
+}
+
+/* Icon swap — chat ↔ dash */
+#bhc-fab .fi {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.25s ease;
+  line-height: 0;
+}
+.fi-chat {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+.fi-dash {
+  opacity: 0;
+  transform: scale(0.5) rotate(90deg);
+}
+#bhc-fab[data-open="true"] .fi-chat {
+  opacity: 0;
+  transform: scale(0.5) rotate(-90deg);
+}
+#bhc-fab[data-open="true"] .fi-dash {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* Notification badge */
+#bhc-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bhc-red);
+  border: 2px solid var(--bhc-white);
+  display: none;
+}
+#bhc-badge.show { display: block; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CHAT PANEL
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-panel {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  z-index: var(--bhc-z-panel);
+  width: 368px;
+  max-width: calc(100vw - 16px);
+  height: 580px;
+  max-height: calc(100svh - 110px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bhc-white);
+  border-radius: var(--bhc-radius-panel);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    0 4px 12px rgba(0,0,0,0.06),
+    0 12px 32px var(--bhc-shadow-color),
+    0 24px 64px var(--bhc-shadow-color);
+
+  /* Hidden state */
+  transform: translateY(16px) scale(0.96);
+  transform-origin: bottom right;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity   0.22s ease,
+    transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* Open state — driven by JS adding .open */
+#bhc-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HEADER
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-hdr {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--bhc-green) 0%, var(--bhc-green-dk) 100%);
+  padding: 16px 14px 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+#bhc-hdr-av {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,0.22);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+
+#bhc-hdr-text {
+  flex: 1;
+  min-width: 0;
+}
+
+#bhc-hdr-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--bhc-white);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#bhc-hdr-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+/* Online pulse dot */
+.bhc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #86efac;
+  flex-shrink: 0;
+  animation: bhcPulse 2.4s infinite;
+}
+@keyframes bhcPulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+#bhc-hdr-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.88);
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Close button */
+#bhc-hdr-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.15);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  outline: none;
+}
+#bhc-hdr-close:hover     { background: rgba(0,0,0,0.28); }
+#bhc-hdr-close:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.7);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MESSAGES AREA
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bhc-bg);
+  scroll-behavior: smooth;
+}
+#bhc-msgs::-webkit-scrollbar       { width: 4px; }
+#bhc-msgs::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+#bhc-msgs::-webkit-scrollbar-track { background: transparent; }
+
+/* Date divider */
+.bhc-div {
+  align-self: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #9ca3af;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+.bhc-div::before,
+.bhc-div::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bhc-border);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MESSAGE ROWS
+───────────────────────────────────────────────────────────────────────────── */
+.bhc-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 82%;
+  animation: bhcIn 0.18s ease both;
+}
+@keyframes bhcIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bhc-row.bot  { align-self: flex-start; }
+.bhc-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+/* Tight gap between consecutive same-sender messages */
+.bhc-row + .bhc-row.bot,
+.bhc-row + .bhc-row.user { margin-top: 2px; }
+
+/* Larger gap when sender changes */
+.bhc-row.bot  + .bhc-row.user,
+.bhc-row.user + .bhc-row.bot  { margin-top: 12px; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   AVATARS
+───────────────────────────────────────────────────────────────────────────── */
+.bhc-av {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  line-height: 0;
+  align-self: flex-end;
+}
+.bhc-row.user .bhc-av {
+  background: var(--bhc-green-dk);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--bhc-white);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+/* Hide avatar for consecutive same-sender messages, but keep the space */
+.bhc-row.hide-av .bhc-av { visibility: hidden; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MESSAGE BUBBLES
+   NOTE: #bhc-root prefix is required to beat the "#bhc-root * { padding:0 }"
+   reset rule — without it, padding: 0 wins.
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-root .bhc-bub {
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  flex-shrink: 1;
+}
+
+/* Bot bubble */
+#bhc-root .bhc-row.bot .bhc-bub {
+  background: #eaeef1;
+  color: var(--bhc-txt);
+  border-radius: 4px var(--bhc-radius-bub) var(--bhc-radius-bub) var(--bhc-radius-bub);
+}
+
+/* User bubble */
+#bhc-root .bhc-row.user .bhc-bub {
+  background: linear-gradient(135deg, var(--bhc-green), var(--bhc-green-dk));
+  color: var(--bhc-white);
+  border-radius: var(--bhc-radius-bub) 4px var(--bhc-radius-bub) var(--bhc-radius-bub);
+}
+
+/* Links inside bubbles */
+#bhc-root .bhc-row.bot  .bhc-bub a { color: var(--bhc-green-dk); font-weight: 600; text-decoration: underline; }
+#bhc-root .bhc-row.user .bhc-bub a { color: rgba(255,255,255,0.9); text-decoration: underline; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPING INDICATOR
+───────────────────────────────────────────────────────────────────────────── */
+.bhc-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+}
+.bhc-typing span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: bhcDot 1.2s infinite ease-in-out;
+}
+.bhc-typing span:nth-child(2) { animation-delay: 0.16s; }
+.bhc-typing span:nth-child(3) { animation-delay: 0.32s; }
+@keyframes bhcDot {
+  0%, 60%, 100% { transform: translateY(0);   opacity: 0.5; }
+  30%            { transform: translateY(-5px); opacity: 1;   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SUGGESTED QUESTION CHIPS
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-chips {
+  flex-shrink: 0;
+  padding: 10px 14px 14px;
+  background: #f8fafb;
+  border-top: 1px solid #e8edf1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+#bhc-chips-lbl {
+  width: 100%;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* NOTE: #bhc-root prefix to beat the padding:0 reset */
+#bhc-root .bhc-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--bhc-white);
+  border: 1.5px solid #d1f5dd;
+  color: #1a7a3c;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  outline: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition:
+    background    0.14s ease,
+    color         0.14s ease,
+    border-color  0.14s ease,
+    transform     0.1s  ease,
+    box-shadow    0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+#bhc-root .bhc-chip:hover {
+  background:    var(--bhc-green);
+  border-color:  var(--bhc-green);
+  color:         var(--bhc-white);
+  transform:     translateY(-1px);
+  box-shadow:    0 4px 12px rgba(43,197,96,0.3);
+}
+#bhc-root .bhc-chip:active {
+  transform:  scale(0.97);
+  box-shadow: none;
+}
+#bhc-root .bhc-chip:focus-visible {
+  outline: 2px solid var(--bhc-green-dk);
+  outline-offset: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ERROR BANNER
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-err {
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  margin: 0 12px 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  font-size: 12.5px;
+}
+#bhc-err.show { display: flex; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INPUT AREA
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-input-wrap {
+  flex-shrink: 0;
+  padding: 10px 12px 12px;
+  background: var(--bhc-white);
+  border-top: 1px solid var(--bhc-border-lt);
+}
+
+/* Pill container */
+#bhc-input-row {
+  display: flex;
+  align-items: center;
+  background: #f8f9fb;
+  border: 1.5px solid #dde1e7;
+  border-radius: 28px;
+  padding: 0 6px 0 16px;
+  min-height: 48px;
+  gap: 6px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow   0.18s ease,
+    background   0.18s ease;
+}
+#bhc-input-row:focus-within {
+  border-color: var(--bhc-green);
+  box-shadow:   0 0 0 3.5px rgba(43,197,96,0.14);
+  background:   var(--bhc-white);
+}
+
+/* Textarea */
+#bhc-ta {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--bhc-txt);
+  line-height: 1.5;
+  padding: 12px 0;
+  max-height: 88px;
+  overflow-y: auto;
+}
+#bhc-ta::placeholder                { color: #adb5bd; }
+#bhc-ta::-webkit-scrollbar          { width: 3px; }
+#bhc-ta::-webkit-scrollbar-thumb    { background: #d1d5db; border-radius: 2px; }
+
+/* Send button */
+#bhc-send {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--bhc-green), var(--bhc-green-dk));
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity    0.14s ease,
+    transform  0.12s ease,
+    box-shadow 0.14s ease;
+  outline: none;
+  line-height: 0;
+  box-shadow: 0 2px 6px rgba(43,197,96,0.35);
+}
+#bhc-send:hover:not(:disabled) {
+  transform:  scale(1.1);
+  box-shadow: 0 4px 12px rgba(43,197,96,0.45);
+}
+#bhc-send:active:not(:disabled) {
+  transform:  scale(0.93);
+  box-shadow: none;
+}
+#bhc-send:disabled {
+  background: #d1d5db;
+  box-shadow: none;
+  cursor: default;
+  opacity: 0.75;
+}
+#bhc-send:focus-visible {
+  outline: 2px solid var(--bhc-green-dk);
+  outline-offset: 3px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────────────────────────────────────── */
+#bhc-footer {
+  flex-shrink: 0;
+  padding: 6px 16px 9px;
+  border-top: 1px solid var(--bhc-border-lt);
+  background: var(--bhc-white);
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#bhc-footer a        { color: #6b7280; font-weight: 600; text-decoration: none; }
+#bhc-footer a:hover  { color: var(--bhc-green-dk); }
+#bhc-footer-tel {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--bhc-red);
+  font-weight: 700;
+  font-size: 11.5px;
+  text-decoration: none;
+}
+#bhc-footer-tel:hover { text-decoration: underline; }
+.bhc-sep { color: #d1d5db; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE — mobile full-screen
+───────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 420px) {
+  #bhc-panel {
+    width: calc(100vw - 8px);
+    right: 4px;
+    bottom: 84px;
+    height: calc(100svh - 96px);
+    max-height: none;
+    border-radius: 16px;
+  }
+  #bhc-fab {
+    right:  16px;
+    bottom: 16px;
+    width:  54px;
+    height: 54px;
+  }
+}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brook Hollow Chat SDK — Full Options Example</title>
+  <style>
+    body {
+      font-family: 'Lato', Arial, sans-serif;
+      background: #f9f9f9;
+      color: #191919;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .page-content { max-width: 800px; margin: 0 auto; }
+    h1 { color: #2bc560; font-size: 2rem; margin-bottom: 8px; }
+    p  { color: #555; line-height: 1.7; }
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 24px 0;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-green { background: #2bc560; color: #fff; }
+    .btn-green:hover { background: #27ae61; }
+    .btn-red { background: #EE2B31; color: #fff; }
+    .btn-red:hover { background: #c0392b; }
+    .btn-grey { background: #e0e0e0; color: #333; }
+    .btn-grey:hover { background: #bbb; }
+    .notice {
+      background: #fff3cd;
+      border-left: 4px solid #f0ad4e;
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin: 24px 0;
+      font-size: 14px;
+    }
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-content">
+    <h1>Brook Hollow Family Dentistry</h1>
+    <p>
+      This page demonstrates the <strong>full options</strong> for the Brook Hollow Chat SDK,
+      including programmatic control of the widget from your own page's JavaScript.
+    </p>
+  </div>
+
+  <script src="../dist/brook-chat.js"></script>
+  <script>
+    // ─── Full configuration ───────────────────────────────────────────────────
+    const chat = BrookChat.init({
+      // Point at the dev server (port 8001), NOT the backend (port 8000).
+      // The dev server proxies /chat/* → localhost:8000 so the browser
+      // sees one origin and never triggers a CORS preflight.
+      apiUrl: 'http://localhost:8001',
+
+      // Optional: header customisation
+      title:    'Brook Hollow Dentistry',
+      subtitle: 'Virtual Front Desk',
+
+      // Optional: input placeholder
+      placeholder: 'Ask about hours, services, insurance…',
+
+      // Optional: first bot message when the panel opens
+      welcomeMsg:
+        "Hi there! 👋 I'm the virtual assistant for Brook Hollow Family Dentistry. " +
+        "I can help with hours, services, insurance, and appointments. How can I help you today?",
+
+      // Optional: quick-reply chips shown before the first user message
+      suggestions: [
+        'What are your hours?',
+        'Do you accept my insurance?',
+        'How do I book?',
+        'Emergency care?',
+        'Teeth whitening info',
+      ],
+
+      // Optional: auto-open when the page loads
+      openOnLoad: false,
+
+      // Optional: mount into a specific container (defaults to document.body)
+      // container: document.getElementById('chat-mount'),
+    });
+
+    // ─── Programmatic control ────────────────────────────────────────────────
+    document.getElementById('btn-open')  .addEventListener('click', () => chat.open());
+    document.getElementById('btn-close') .addEventListener('click', () => chat.close());
+    document.getElementById('btn-toggle').addEventListener('click', () => chat.toggle());
+    document.getElementById('btn-badge') .addEventListener('click', () => chat.showBadge());
+    document.getElementById('btn-msg')   .addEventListener('click', () => {
+      chat.sendMessage('What are your hours?');
+    });
+
+    // ─── Example: show badge after 5 s if the panel is still closed ──────────
+    setTimeout(() => {
+      if (!chat.getState().panelOpen) chat.showBadge();
+    }, 5000);
+
+    // ─── Example: log state changes ──────────────────────────────────────────
+    chat.on('stateChange', ({ prev, next }) => {
+      if (!prev.panelOpen && next.panelOpen)  console.log('[BrookChat] panel opened');
+      if (prev.panelOpen  && !next.panelOpen) console.log('[BrookChat] panel closed');
+      if (!prev.busy && next.busy) console.log('[BrookChat] request in flight');
+      if (prev.busy  && !next.busy) {
+        console.log('[BrookChat] response complete');
+        console.log('  lastBotMessage:', next.lastBotMessage?.slice(0, 80));
+      }
+    });
+
+    // ─── Example: read history when a response arrives ───────────────────────
+    chat.on('response', () => {
+      const history = chat.getHistory();
+      console.log('[BrookChat] conversation history (' + history.length + ' messages):');
+      history.forEach(m => console.log('  [' + m.role + ']', m.text.slice(0, 60)));
+    });
+  </script>
+</body>
+</html>
